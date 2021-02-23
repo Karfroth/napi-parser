@@ -73,32 +73,6 @@ object TypeParser {
   }
 
   def typedefDecl[_: P] = P(typedef ~ ignore.rep ~ (enumDef | structParser | functionPointer))
-  def apply() = {
-    def testStr = 
-      """
-        |typedef struct {
-        |  uint32_t major;
-        |  uint32_t minor;
-        |  uint32_t patch;
-        |  const char* release;
-        |} napi_node_version;
-      """.stripMargin.trim
-    def testStr2 =
-      """
-        | typedef struct napi_async_work__* napi_async_work;
-      """.stripMargin.trim
-    def testStr3 =
-      """
-        |typedef void (*napi_async_cleanup_hook)(napi_async_cleanup_hook_handle handle,
-        |                                        void* data);
-      """.stripMargin.trim
-    def parser[_: P] = P(typedefDecl ~ End)
-    def res = parse(testStr3, parser(_))
-    println(res)
-  }
-  // TODO: handle typedef
-  // struct(params are optional)
-  // function pointer
 }
 
 object HeaderParser {
