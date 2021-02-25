@@ -6,9 +6,6 @@ import org.scalatest.matchers.should.Matchers
 import napi.parser._
 import fastparse._
 import MultiLineWhitespace._
-import napi.parser.TypeParser.Struct
-import napi.parser.TypeParser.StructAddress
-import napi.parser.TypeParser.FunctionPointer
 
 class NAPIParserSpec extends AnyFlatSpec with Matchers {
   "Func Parser" should "parse as expected" in {
@@ -56,7 +53,7 @@ class NAPIParserSpec extends AnyFlatSpec with Matchers {
     def parser[_: P] = P(TypeParser.enumDef ~ End)
     def res = parse(testStr, parser(_))
     def expected = Parsed.Success(
-      TypeParser.Enum(
+      Enum(
         "napi_ab"
       , List("napi_a", "napi_b")
       )

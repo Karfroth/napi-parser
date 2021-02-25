@@ -11,6 +11,10 @@ final case class FuncName(str: String)
 sealed trait ParseResult
 case object Ignored extends ParseResult
 final case class FuncDefinition(returnType: ParamType, name: String, params: Seq[Param]) extends ParseResult
+final case class Enum(name: String, elems: Seq[String]) extends ParseResult
+final case class Struct(name: String, params: Seq[Param]) extends ParseResult
+final case class StructAddress(name: String, originType: String) extends ParseResult
+final case class FunctionPointer(name: String, returnType: ParamType, params: Seq[Param]) extends ParseResult
 
 object CommonParser {
   case object PointerType
@@ -38,17 +42,11 @@ object FuncParser {
     case (_, param) => Seq(param)
   }
 
-  def funcDecl[_: P] = P(napiExtern.? ~ ignore.rep.? ~ typeDecl ~ strChars.! ~ ignore.rep.? ~ params).map(FuncDefinition.tupled)
+  def funcDecl[_: P]: P[ParseResult] = P(napiExtern.? ~ ignore.rep.? ~ typeDecl ~ strChars.! ~ ignore.rep.? ~ params).map(FuncDefinition.tupled)
 }
 
 object TypeParser {
   import CommonParser._
-  
-  sealed trait TypeDef
-  final case class Enum(name: String, elems: Seq[String]) extends TypeDef
-  final case class Struct(name: String, params: Seq[Param]) extends TypeDef
-  final case class StructAddress(name: String, originType: String) extends TypeDef
-  final case class FunctionPointer(name: String, returnType: ParamType, params: Seq[Param]) extends TypeDef
   
   def enumElem[_: P] = P((ignore.rep.? ~ strChars.! ~ "," ~ ignore.rep.?).rep.? ~ ignore.rep.? ~ strChars.! ~ ignore.rep.?).map {
     case (None, elem) => Seq(elem)
@@ -66,9 +64,10 @@ object TypeParser {
     StructAddress(name, origin)
   }
   def structKeyword[_: P] = P("struct" ~ ignore.rep.?)
-  def structParser[_: P] = P(structKeyword ~ (struct | structAddress))
+  def structWithoutKeyword[_: P]: P[ParseResult] = P(struct | structAddress)
+  def structParser[_: P]: P[ParseResult] = P(structKeyword ~ (struct | structAddress))
 
-  def functionPointer[_: P] = P(typeDecl ~ ignore.rep.? ~ "(" ~ "*" ~ strChars.! ~ ")" ~ ignore.rep.? ~ FuncParser.params).map {
+  def functionPointer[_: P]: P[ParseResult] = P(typeDecl ~ ignore.rep.? ~ "(" ~ "*" ~ strChars.! ~ ")" ~ ignore.rep.? ~ FuncParser.params).map {
     case (paramType, name, params) => FunctionPointer(name, paramType, params)
   }
 
@@ -81,5 +80,5 @@ object HeaderParser {
   def statement[_: P] = CharsWhile(c => c != '\n' && c != '\r' && c != '\\')
   def cDefinition[_: P] = P("#" ~ (statement ~ "\\\n").? ~ statement)
   def headerDecl[_: P] = P(
-    (((cDefinition ~ "\n") | ignore).rep.? ~ (TypeParser.typedefDecl | FuncParser.funcDecl)).rep.? ~ (cDefinition | ignore).?)
+    (((cDefinition ~ "\n") | ignore).rep.? ~ (TypeParser.typedefDecl | FuncParser.funcDecl)).rep.map(a => a).? ~ (cDefinition | ignore).?)
 }
